@@ -12,6 +12,7 @@
             <conv:StatusToLabelConverter x:Key="StatusToLabelConverter"/>
             <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
             <conv:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+            <conv:BoolToGridLengthConverter x:Key="BoolToGridLengthConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

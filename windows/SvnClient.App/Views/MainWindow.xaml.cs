@@ -30,6 +30,23 @@ public partial class MainWindow : Window
         }
     }
 
+    private void QuickOpen_Click(object sender, RoutedEventArgs e)
+    {
+        var commands = new List<(string Label, Action Action)>
+        {
+            ("SVN: Update working copy", () => _viewModel.UpdateCommand.Execute(null)),
+            ("SVN: Show Source Control panel", () => _viewModel.CloseHistoryCommand.Execute(null)),
+            ("SVN: Show History", () => _viewModel.ViewHistoryCommand.Execute(null)),
+            ("Explorer: Refresh Tree", () => _viewModel.RefreshTreeCommand.Execute(null)),
+            ("Preferences: Open Settings", () => Settings_Click(sender, e)),
+        };
+        var dialog = new QuickOpenWindow(_viewModel.FlattenFilePaths(), commands) { Owner = this };
+        if (dialog.ShowDialog() == true && dialog.SelectedFilePath != null)
+        {
+            _viewModel.NavigateToFileByPath(dialog.SelectedFilePath);
+        }
+    }
+
     private void FileTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
         _viewModel.SelectedItem = e.NewValue as FileTreeItemViewModel;

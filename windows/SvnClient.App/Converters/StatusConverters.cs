@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 using SvnClient.App.Models;
@@ -65,4 +66,21 @@ public class InverseBooleanConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object? parameter, CultureInfo culture) =>
         !(value is bool b && b);
+}
+
+/// <summary>Collapses a fixed-width ColumnDefinition to 0 when false, so hiding a panel
+/// actually reclaims its space instead of just hiding its content in place.
+/// ConverterParameter is the pixel width to use when true (defaults to 280).</summary>
+public class BoolToGridLengthConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var visible = value is bool b && b;
+        if (!visible) return new GridLength(0);
+        var width = parameter is string s && double.TryParse(s, out var d) ? d : 280;
+        return new GridLength(width);
+    }
+
+    public object ConvertBack(object value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
 }

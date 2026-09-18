@@ -208,6 +208,14 @@ public class SvnCliService
         await File.WriteAllTextAsync(absPath, content);
     }
 
+    public async Task CreateFileAsync(AppSettings settings, string relativePath)
+    {
+        var absPath = Path.Combine(settings.WorkingCopyPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(absPath)!);
+        using (File.Open(absPath, FileMode.CreateNew)) { }
+        await AddAsync(settings, relativePath);
+    }
+
     public async Task<string> GetDiffAsync(AppSettings settings, string relativePath)
     {
         var absPath = Path.Combine(settings.WorkingCopyPath, relativePath.Replace('/', Path.DirectorySeparatorChar));

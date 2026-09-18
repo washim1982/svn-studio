@@ -4,50 +4,117 @@
         xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"
         xmlns:behaviors="clr-namespace:SvnClient.App.Behaviors"
         xmlns:vm="clr-namespace:SvnClient.App.ViewModels"
-        Title="SVN Studio" Height="820" Width="1400"
+        Title="SVN Studio" Height="860" Width="1480"
         Background="{DynamicResource BackgroundBrush}"
         WindowStartupLocation="CenterScreen">
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="56"/>
+            <RowDefinition Height="52"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="26"/>
         </Grid.RowDefinitions>
 
-        <!-- Top bar -->
+        <!-- ===================== TITLE BAR ===================== -->
         <Border Grid.Row="0" Background="{DynamicResource ElevatedBrush}" BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="0,0,0,1">
-            <Grid Margin="20,0">
+            <Grid Margin="16,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="560"/>
+                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
+
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="26" Height="26" CornerRadius="6" Background="{DynamicResource AccentBrush}" Margin="0,0,10,0">
-                        <TextBlock Text="S" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Border Width="24" Height="24" CornerRadius="6" Background="{DynamicResource AccentBrush}" Margin="0,0,8,0">
+                        <TextBlock Text="S" Foreground="White" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
-                    <TextBlock Text="SVN Studio" FontWeight="Bold" FontSize="16" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource MutedTextBrush}" Margin="16,0,0,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="SVN STUDIO" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <Button Content="&lt;" Width="26" Height="26" Style="{DynamicResource SecondaryButton}" Padding="0" Command="{Binding GoBackCommand}" Margin="0,0,2,0"/>
+                    <Button Content="&gt;" Width="26" Height="26" Style="{DynamicResource SecondaryButton}" Padding="0" Command="{Binding GoForwardCommand}"/>
                 </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+
+                <Button Grid.Column="1" Click="QuickOpen_Click" Style="{DynamicResource SecondaryButton}"
+                        HorizontalContentAlignment="Stretch" Padding="10,6" VerticalAlignment="Center">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Search files, symbols, or commands" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Left" FontSize="12"/>
+                        <TextBlock Grid.Column="1" Text="Ctrl+K" Foreground="{DynamicResource MutedTextBrush}" FontSize="10"/>
+                    </Grid>
+                </Button>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource DangerBrush}" FontSize="11" Margin="0,0,12,0" VerticalAlignment="Center" MaxWidth="260" TextTrimming="CharacterEllipsis"/>
                     <CheckBox Content="Editable" IsChecked="{Binding IsEditable}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                    <Button Content="Refresh" Style="{DynamicResource SecondaryButton}" Command="{Binding RefreshTreeCommand}" Margin="0,0,8,0"/>
-                    <Button Content="Settings" Style="{DynamicResource SecondaryButton}" Click="Settings_Click"/>
+                    <Button Content="⬓" Width="30" Height="30" Style="{DynamicResource SecondaryButton}" Command="{Binding ToggleLeftPanelCommand}" ToolTip="Toggle Explorer" Margin="0,0,4,0"/>
+                    <Button Content="⬒" Width="30" Height="30" Style="{DynamicResource SecondaryButton}" Command="{Binding ToggleRightPanelCommand}" ToolTip="Toggle SVN Panel" Margin="0,0,4,0"/>
+                    <Button Content="⚙" Width="30" Height="30" Style="{DynamicResource SecondaryButton}" Click="Settings_Click" ToolTip="Settings"/>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- Three-panel workspace -->
+        <!-- ===================== WORKSPACE ===================== -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="280"/>
+                <ColumnDefinition Width="48"/>
+                <ColumnDefinition Width="{Binding LeftPanelVisible, Converter={StaticResource BoolToGridLengthConverter}, ConverterParameter=280}"/>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="360"/>
+                <ColumnDefinition Width="{Binding RightPanelVisible, Converter={StaticResource BoolToGridLengthConverter}, ConverterParameter=380}"/>
             </Grid.ColumnDefinitions>
 
-            <!-- LEFT: file tree -->
-            <Border Grid.Column="0" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="0,0,1,0">
+            <!-- ACTIVITY BAR -->
+            <Border Grid.Column="0" Background="{DynamicResource ElevatedBrush}" BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="0,0,1,0">
+                <Grid>
+                    <StackPanel VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,10,0,0">
+                        <Button Content="🗀" Width="36" Height="36" Style="{DynamicResource SecondaryButton}" BorderThickness="0" Margin="0,0,0,4"
+                                Command="{Binding ToggleLeftPanelCommand}" ToolTip="Explorer"/>
+                        <Grid Margin="0,0,0,4">
+                            <Button Content="🔀" Width="36" Height="36" Style="{DynamicResource SecondaryButton}" BorderThickness="0"
+                                    Command="{Binding CloseHistoryCommand}" ToolTip="Source Control"/>
+                            <Border Background="{DynamicResource AccentBrush}" CornerRadius="8" Width="16" Height="16"
+                                    HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-4,-4,0"
+                                    Visibility="{Binding HasChanges, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock Text="{Binding TotalChangedCount}" Foreground="White" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </Grid>
+                        <Button Content="🕒" Width="36" Height="36" Style="{DynamicResource SecondaryButton}" BorderThickness="0"
+                                Command="{Binding ViewHistoryCommand}" ToolTip="History"/>
+                    </StackPanel>
+                    <Button Content="⚙" Width="36" Height="36" Style="{DynamicResource SecondaryButton}" BorderThickness="0"
+                            VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,10"
+                            Click="Settings_Click" ToolTip="Settings"/>
+                </Grid>
+            </Border>
+
+            <!-- LEFT: EXPLORER -->
+            <Border Grid.Column="1" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="0,0,1,0"
+                    Visibility="{Binding LeftPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="REPOSITORY" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource MutedTextBrush}" Margin="14,10"/>
+                    <Grid DockPanel.Dock="Top" Margin="12,10,8,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="EXPLORER" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Content="📄" Width="24" Height="24" Style="{DynamicResource SecondaryButton}" BorderThickness="0" Padding="0" FontSize="11"
+                                    Command="{Binding NewFileCommand}" CommandParameter="" ToolTip="New File"/>
+                            <Button Content="📁" Width="24" Height="24" Style="{DynamicResource SecondaryButton}" BorderThickness="0" Padding="0" FontSize="11"
+                                    Command="{Binding CreateFolderCommand}" CommandParameter="" ToolTip="New Folder"/>
+                            <Button Content="🔄" Width="24" Height="24" Style="{DynamicResource SecondaryButton}" BorderThickness="0" Padding="0" FontSize="11"
+                                    Command="{Binding RefreshTreeCommand}" ToolTip="Refresh"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock DockPanel.Dock="Top" Text="{Binding RepoName}" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource TextBrush}" Margin="12,0,0,8"/>
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,0,8,8">
+                        <Button Style="{DynamicResource SecondaryButton}" Padding="8,4" Margin="0,0,6,0" FontSize="11"
+                                Command="{Binding UploadCommand}" CommandParameter="">⬆ Upload</Button>
+                        <Button Style="{DynamicResource SecondaryButton}" Padding="8,4" FontSize="11"
+                                Command="{Binding UploadFolderCommand}" CommandParameter="">📁 Folder</Button>
+                    </StackPanel>
+
                     <TreeView x:Name="FileTreeView"
                               ItemsSource="{Binding RootItem.Children}"
                               AllowDrop="True"
@@ -95,12 +162,13 @@
                                                     <MenuItem Header="Upload folder here"
                                                               Command="{Binding DataContext.UploadFolderCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                               CommandParameter="{Binding Path}"/>
-                                                    <MenuItem Header="Create folder"
+                                                    <MenuItem Header="New file"
+                                                              Command="{Binding DataContext.NewFileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                              CommandParameter="{Binding Path}"/>
+                                                    <MenuItem Header="New folder"
                                                               Command="{Binding DataContext.CreateFolderCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                               CommandParameter="{Binding Path}"/>
                                                     <Separator/>
-                                                    <MenuItem Header="Commit selected"
-                                                              Command="{Binding DataContext.CommitCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
                                                     <MenuItem Header="Revert"
                                                               Command="{Binding DataContext.RevertCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                               CommandParameter="{Binding Path}"/>
@@ -133,7 +201,7 @@
             </Border>
 
             <!-- CENTER: file viewer / editor -->
-            <Grid Grid.Column="1">
+            <Grid Grid.Column="2">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -145,7 +213,7 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="{Binding SelectedItem.Path}" FontFamily="Consolas" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="0" Text="{Binding CurrentFilePath}" FontFamily="Consolas" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
                         <StackPanel Grid.Column="1" Orientation="Horizontal">
                             <Button Content="Toggle Diff" Style="{DynamicResource SecondaryButton}" Command="{Binding ToggleDiffCommand}" Margin="0,0,8,0"/>
                             <Button Content="Save" Style="{DynamicResource PrimaryButton}" Command="{Binding SaveFileCommand}" IsEnabled="{Binding IsEditable}"/>
@@ -169,45 +237,89 @@
                              BorderThickness="0"
                              Visibility="{Binding ShowDiff, Converter={StaticResource BoolToVisibilityConverter}}"/>
                 </Grid>
-                <TextBlock Grid.Row="1" Text="Select a file from the tree to view it here."
-                           Foreground="{DynamicResource MutedTextBrush}"
-                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                           Visibility="{Binding IsFileSelected, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
+                <Grid Grid.Row="1" Visibility="{Binding IsFileSelected, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="380">
+                        <Border Width="64" Height="64" CornerRadius="32" BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="1" Margin="0,0,0,14" HorizontalAlignment="Center">
+                            <TextBlock Text="&lt;/&gt;" FontSize="20" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Your working copy, under control" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextBrush}"
+                                   HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                        <TextBlock Text="Select a file from Explorer, or run Update / Commit from the SVN panel to get started."
+                                   FontSize="13" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Grid>
             </Grid>
 
             <!-- RIGHT: SVN operations -->
-            <Border Grid.Column="2" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="1,0,0,0">
+            <Border Grid.Column="3" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="1,0,0,0"
+                    Visibility="{Binding RightPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}">
                 <Grid>
-                    <StackPanel Visibility="{Binding IsHistoryVisible, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}">
-                        <Grid Margin="14,10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Visibility="{Binding IsHistoryVisible, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0" Margin="14,10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="COMMIT" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                <Ellipse Width="8" Height="8" Margin="0,0,6,0" VerticalAlignment="Center">
+                                    <Ellipse.Style>
+                                        <Style TargetType="Ellipse">
+                                            <Setter Property="Fill" Value="{DynamicResource WarningBrush}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasChanges}" Value="False">
+                                                    <Setter Property="Fill" Value="{DynamicResource SuccessBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
+                                <TextBlock FontSize="11" FontWeight="Bold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center"
+                                           Text="{Binding TotalChangedCount, StringFormat='{}{0} change(s)'}"/>
+                            </StackPanel>
                             <Button Grid.Column="1" Content="⤓ Update" Style="{DynamicResource SecondaryButton}" Command="{Binding UpdateCommand}"/>
                         </Grid>
-                        <TextBox Margin="14,0,14,8" Height="80" AcceptsReturn="True" TextWrapping="Wrap"
-                                 Text="{Binding CommitMessage, UpdateSourceTrigger=PropertyChanged}"/>
-                        <StackPanel Orientation="Horizontal" Margin="14,0,14,10">
-                            <Button Content="Commit" Style="{DynamicResource PrimaryButton}" Command="{Binding CommitCommand}" Margin="0,0,8,0"/>
-                            <Button Content="Revert Selected" Style="{DynamicResource SecondaryButton}" Command="{Binding RevertCommand}"/>
-                        </StackPanel>
-                        <TextBlock Text="CHANGED FILES" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource MutedTextBrush}" Margin="14,6"/>
-                        <ItemsControl ItemsSource="{Binding ChangedFiles}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel Orientation="Horizontal" Margin="14,4">
-                                        <CheckBox IsChecked="{Binding IsChecked}" Margin="0,0,8,0"/>
-                                        <TextBlock Text="{Binding Status}" Foreground="{Binding Status, Converter={StaticResource StatusToBrushConverter}}" FontWeight="Bold" FontSize="11" Margin="0,0,8,0"/>
-                                        <TextBlock Text="{Binding Path}" Foreground="{DynamicResource TextBrush}" TextTrimming="CharacterEllipsis"/>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
 
-                    <DockPanel Visibility="{Binding IsHistoryVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Button Grid.Row="1" Content="Select / Unselect all" HorizontalAlignment="Right" Margin="14,0,14,6"
+                                Style="{DynamicResource SecondaryButton}" Padding="8,3" FontSize="11"
+                                Command="{Binding SelectAllChangesCommand}"/>
+
+                        <ScrollViewer Grid.Row="2">
+                            <TreeView x:Name="ChangesTreeView" ItemsSource="{Binding ChangesTree}" Background="Transparent" BorderThickness="0">
+                                <TreeView.ItemTemplate>
+                                    <HierarchicalDataTemplate DataType="{x:Type vm:ChangeNodeViewModel}" ItemsSource="{Binding Children}">
+                                        <StackPanel Orientation="Horizontal" Margin="0,2">
+                                            <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}" IsThreeState="False" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="📁" Margin="0,0,4,0" Visibility="{Binding IsDirectory, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                            <TextBlock Text="📄" Margin="0,0,4,0" Visibility="{Binding IsDirectory, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
+                                            <TextBlock Text="{Binding Name}" Foreground="{Binding Status, Converter={StaticResource StatusToBrushConverter}}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Status, Converter={StaticResource StatusToLabelConverter}}"
+                                                       Foreground="{Binding Status, Converter={StaticResource StatusToBrushConverter}}"
+                                                       FontSize="10" FontWeight="Bold" Margin="6,0,0,0" VerticalAlignment="Center"
+                                                       Visibility="{Binding IsOwnChange, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                        </StackPanel>
+                                    </HierarchicalDataTemplate>
+                                </TreeView.ItemTemplate>
+                                <TreeView.ItemContainerStyle>
+                                    <Style TargetType="TreeViewItem">
+                                        <Setter Property="IsExpanded" Value="True"/>
+                                    </Style>
+                                </TreeView.ItemContainerStyle>
+                            </TreeView>
+                        </ScrollViewer>
+                    </Grid>
+
+                    <DockPanel Grid.Row="0" Visibility="{Binding IsHistoryVisible, Converter={StaticResource BoolToVisibilityConverter}}">
                         <Grid DockPanel.Dock="Top" Margin="14,10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -239,8 +351,56 @@
                             </ItemsControl>
                         </ScrollViewer>
                     </DockPanel>
+
+                    <!-- Composer: commit message + quick actions, pinned to the bottom -->
+                    <Border Grid.Row="1" BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="0,1,0,0" Padding="12,10"
+                            Visibility="{Binding IsHistoryVisible, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <Button Content="✓ Commit" Style="{DynamicResource PrimaryButton}" Command="{Binding CommitCommand}" Margin="0,0,8,0" Padding="10,5" FontSize="11"/>
+                                <Button Content="⤓ Update" Style="{DynamicResource SecondaryButton}" Command="{Binding UpdateCommand}" Margin="0,0,8,0" Padding="10,5" FontSize="11"/>
+                                <Button Content="Revert" Style="{DynamicResource SecondaryButton}" Command="{Binding RevertCommand}" Padding="10,5" FontSize="11"/>
+                            </StackPanel>
+                            <Grid>
+                                <TextBox Height="70" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                                         Text="{Binding CommitMessage, UpdateSourceTrigger=PropertyChanged}"/>
+                            </Grid>
+                            <TextBlock Margin="0,6,0,0" FontSize="10" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Center">
+                                <Run Text="{Binding SelectedChangedCount, Mode=OneWay}"/>
+                                <Run Text=" of "/>
+                                <Run Text="{Binding TotalChangedCount, Mode=OneWay}"/>
+                                <Run Text=" item(s) selected"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
                 </Grid>
             </Border>
         </Grid>
+
+        <!-- ===================== STATUS BAR ===================== -->
+        <Border Grid.Row="2" Background="{DynamicResource AccentBrush}">
+            <Grid Margin="12,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock Foreground="White" FontSize="11" VerticalAlignment="Center" Margin="0,0,16,0">
+                        <Run Text="🔀 "/>
+                        <Run Text="{Binding RepoName, Mode=OneWay}"/>
+                    </TextBlock>
+                    <TextBlock Foreground="White" FontSize="11" VerticalAlignment="Center" Margin="0,0,16,0">
+                        <Run Text="✓ "/>
+                        <Run Text="{Binding TotalChangedCount, Mode=OneWay}"/>
+                    </TextBlock>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <TextBlock Text="Dark" Foreground="White" FontSize="11" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                    <TextBlock Text="UTF-8" Foreground="White" FontSize="11" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                    <TextBlock Text="LF" Foreground="White" FontSize="11" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                    <TextBlock Text="Desktop" Foreground="White" FontSize="11" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Border>
     </Grid>
 </Window>
