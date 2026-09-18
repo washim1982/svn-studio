@@ -61,7 +61,7 @@
                 <ComboBox ItemsSource="{Binding AiPresets}" SelectedItem="{Binding SelectedAiPreset}" DisplayMemberPath="Label" Margin="0,0,0,10"/>
 
                 <TextBlock Text="Endpoint URL (any OpenAI-compatible server; choose a provider above or type a custom URL)" Style="{StaticResource FieldLabel}" TextWrapping="Wrap"/>
-                <TextBox Text="{Binding AiEndpoint, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
+                <TextBox x:Name="AiEndpointBox" Text="{Binding AiEndpoint, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
 
                 <TextBlock Text="Model — click Test connection to list the server's models (blank = first available)" Style="{StaticResource FieldLabel}" TextWrapping="Wrap"/>
                 <ComboBox IsEditable="True" ItemsSource="{Binding AiModels}" Text="{Binding AiModel, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>

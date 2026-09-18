@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { svnApi } from "../api/svnApi";
 import type { SvnSettingsPublic } from "../types/svn";
 
@@ -32,6 +32,11 @@ export function Settings({ onClose, onSaved }: SettingsProps) {
   const [aiStatus, setAiStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Choosing "Custom" keeps the current URL for editing, so it must be remembered
+  // explicitly — otherwise the dropdown re-derives a preset from that unchanged URL
+  // and snaps straight back.
+  const [customProvider, setCustomProvider] = useState(false);
+  const endpointInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     svnApi.getSettings().then((s) => {
@@ -44,7 +49,23 @@ export function Settings({ onClose, onSaved }: SettingsProps) {
     });
   }, []);
 
-  const presetValue = AI_PRESETS.find((p) => normalizeUrl(p.url) === normalizeUrl(aiEndpoint))?.url ?? "custom";
+  const matchedPreset = AI_PRESETS.find((p) => normalizeUrl(p.url) === normalizeUrl(aiEndpoint));
+  const presetValue = customProvider || !matchedPreset ? "custom" : matchedPreset.url;
+
+  function handleProviderChange(value: string) {
+    if (value === "custom") {
+      setCustomProvider(true);
+      requestAnimationFrame(() => {
+        endpointInputRef.current?.focus();
+        endpointInputRef.current?.select();
+      });
+    } else {
+      setCustomProvider(false);
+      setAiEndpoint(value);
+    }
+    setAiModels([]);
+    setAiStatus(null);
+  }
 
   async function handleSave() {
     setBusy(true);
@@ -138,12 +159,7 @@ export function Settings({ onClose, onSaved }: SettingsProps) {
 
         <div className="settings-section-title">Local AI (code review)</div>
         <Field label="Provider">
-          <select
-            value={presetValue}
-            onChange={(e) => {
-              if (e.target.value !== "custom") setAiEndpoint(e.target.value);
-            }}
-          >
+          <select value={presetValue} onChange={(e) => handleProviderChange(e.target.value)}>
             {AI_PRESETS.map((p) => (
               <option key={p.url} value={p.url}>
                 {p.label}
@@ -153,7 +169,12 @@ export function Settings({ onClose, onSaved }: SettingsProps) {
           </select>
         </Field>
         <Field label="Endpoint URL">
-          <input value={aiEndpoint} onChange={(e) => setAiEndpoint(e.target.value)} placeholder="http://127.0.0.1:8181/v1" />
+          <input
+            ref={endpointInputRef}
+            value={aiEndpoint}
+            onChange={(e) => setAiEndpoint(e.target.value)}
+            placeholder="http://127.0.0.1:8181/v1"
+          />
         </Field>
         <Field label="Model — click Test connection to list the server's models (blank = first available)">
           <input value={aiModel} onChange={(e) => setAiModel(e.target.value)} list="ai-model-options" placeholder="e.g. Qwen3.5-9B-Q4_K_M" />

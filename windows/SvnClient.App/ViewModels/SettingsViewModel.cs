@@ -7,13 +7,19 @@ using SvnClient.App.Services;
 
 namespace SvnClient.App.ViewModels;
 
-public record AiProviderPreset(string Label, string Url);
+/// <summary>A provider choice; a null Url is the "Custom" entry (the user types the URL).</summary>
+public record AiProviderPreset(string Label, string? Url)
+{
+    public bool IsCustom => Url == null;
+}
 
 public partial class SettingsViewModel : ObservableObject
 {
     private readonly SettingsService _settingsService;
     private readonly SvnCliService _svnService;
     private readonly AiReviewService _aiService;
+
+    private static readonly AiProviderPreset CustomPreset = new("Custom OpenAI-compatible endpoint", null);
 
     // All of these speak the OpenAI-compatible API, so only the base URL differs.
     public IReadOnlyList<AiProviderPreset> AiPresets { get; } = new[]
@@ -22,11 +28,21 @@ public partial class SettingsViewModel : ObservableObject
         new AiProviderPreset("llama-server (direct)", "http://127.0.0.1:8080/v1"),
         new AiProviderPreset("Ollama", "http://127.0.0.1:11434/v1"),
         new AiProviderPreset("LM Studio", "http://127.0.0.1:1234/v1"),
+        CustomPreset,
     };
+
+    /// <summary>Raised when "Custom" is picked, so the view can focus the URL box.</summary>
+    public event Action? CustomProviderSelected;
 
     // "localhost" and "127.0.0.1" (and a trailing slash) point at the same server.
     private static string NormalizeUrl(string url) =>
         url.Trim().TrimEnd('/').Replace("://localhost", "://127.0.0.1", StringComparison.OrdinalIgnoreCase).ToLowerInvariant();
+
+    private AiProviderPreset PresetFor(string endpoint) =>
+        AiPresets.FirstOrDefault(p => !p.IsCustom && NormalizeUrl(p.Url!) == NormalizeUrl(endpoint)) ?? CustomPreset;
+
+    // Guards the endpoint <-> dropdown sync so one side updating the other doesn't echo back.
+    private bool _syncingPreset;
 
     public ObservableCollection<string> AiModels { get; } = new();
 
@@ -50,7 +66,30 @@ public partial class SettingsViewModel : ObservableObject
 
     partial void OnSelectedAiPresetChanged(AiProviderPreset? value)
     {
-        if (value != null) AiEndpoint = value.Url;
+        if (value == null || _syncingPreset) return;
+        if (value.IsCustom)
+        {
+            // Keep the current URL as a starting point to edit.
+            CustomProviderSelected?.Invoke();
+            return;
+        }
+        _syncingPreset = true;
+        AiEndpoint = value.Url!;
+        _syncingPreset = false;
+        AiModels.Clear();
+        AiStatus = "";
+    }
+
+    // Typing a URL by hand selects the matching preset, or "Custom" if none matches.
+    partial void OnAiEndpointChanged(string value)
+    {
+        if (_syncingPreset) return;
+        var preset = PresetFor(value);
+        // While "Custom" is chosen, only leave it if the typed URL is exactly a preset's.
+        if (SelectedAiPreset?.IsCustom == true && preset.IsCustom) return;
+        _syncingPreset = true;
+        SelectedAiPreset = preset;
+        _syncingPreset = false;
     }
 
     [RelayCommand]
@@ -105,7 +144,9 @@ public partial class SettingsViewModel : ObservableObject
         AiEndpoint = settings.AiEndpoint;
         AiModel = settings.AiModel;
         HasStoredAiApiKey = !string.IsNullOrEmpty(settings.ProtectedAiApiKey);
-        selectedAiPreset = AiPresets.FirstOrDefault(p => NormalizeUrl(p.Url) == NormalizeUrl(settings.AiEndpoint));
+        _syncingPreset = true;
+        SelectedAiPreset = PresetFor(settings.AiEndpoint);
+        _syncingPreset = false;
     }
 
     [RelayCommand]

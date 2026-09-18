@@ -15,6 +15,11 @@ public partial class SettingsWindow : Window
         _viewModel = new SettingsViewModel(settingsService, svnService, aiService);
         DataContext = _viewModel;
         _viewModel.SettingsSaved += () => DialogResult = true;
+        _viewModel.CustomProviderSelected += () =>
+        {
+            AiEndpointBox.Focus();
+            AiEndpointBox.SelectAll();
+        };
     }
 
     // PasswordBox.Password isn't bindable (by design, so secrets don't sit in bindings).
