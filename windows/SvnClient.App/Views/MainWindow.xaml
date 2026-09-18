@@ -1,0 +1,246 @@
+<Window x:Class="SvnClient.App.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"
+        xmlns:behaviors="clr-namespace:SvnClient.App.Behaviors"
+        xmlns:vm="clr-namespace:SvnClient.App.ViewModels"
+        Title="SVN Studio" Height="820" Width="1400"
+        Background="{DynamicResource BackgroundBrush}"
+        WindowStartupLocation="CenterScreen">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="56"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top bar -->
+        <Border Grid.Row="0" Background="{DynamicResource ElevatedBrush}" BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="0,0,0,1">
+            <Grid Margin="20,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="26" Height="26" CornerRadius="6" Background="{DynamicResource AccentBrush}" Margin="0,0,10,0">
+                        <TextBlock Text="S" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock Text="SVN Studio" FontWeight="Bold" FontSize="16" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource MutedTextBrush}" Margin="16,0,0,0" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <CheckBox Content="Editable" IsChecked="{Binding IsEditable}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <Button Content="Refresh" Style="{DynamicResource SecondaryButton}" Command="{Binding RefreshTreeCommand}" Margin="0,0,8,0"/>
+                    <Button Content="Settings" Style="{DynamicResource SecondaryButton}" Click="Settings_Click"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Three-panel workspace -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="280"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="360"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT: file tree -->
+            <Border Grid.Column="0" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="REPOSITORY" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource MutedTextBrush}" Margin="14,10"/>
+                    <TreeView x:Name="FileTreeView"
+                              ItemsSource="{Binding RootItem.Children}"
+                              AllowDrop="True"
+                              PreviewDrop="FileTreeView_PreviewDrop"
+                              PreviewDragOver="FileTreeView_PreviewDragOver"
+                              SelectedItemChanged="FileTreeView_SelectedItemChanged">
+                        <TreeView.Resources>
+                            <Style TargetType="TreeViewItem">
+                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                                <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
+                            </Style>
+                        </TreeView.Resources>
+                        <TreeView.ItemTemplate>
+                            <HierarchicalDataTemplate DataType="{x:Type vm:FileTreeItemViewModel}" ItemsSource="{Binding Children}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="📁" Margin="0,0,4,0" Visibility="{Binding IsDirectory, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                    <TextBlock Text="📄" Margin="0,0,4,0">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsDirectory}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding Name}" Foreground="{Binding Status, Converter={StaticResource StatusToBrushConverter}}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="🔒" Margin="6,0,0,0" Visibility="{Binding Locked, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                    <TextBlock Text="{Binding Status, Converter={StaticResource StatusToLabelConverter}}"
+                                               Foreground="{Binding Status, Converter={StaticResource StatusToBrushConverter}}"
+                                               FontSize="10" FontWeight="Bold" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <HierarchicalDataTemplate.ItemContainerStyle>
+                                    <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
+                                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                                        <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
+                                        <Setter Property="ContextMenu">
+                                            <Setter.Value>
+                                                <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                                    <MenuItem Header="Upload file(s) here"
+                                                              Command="{Binding DataContext.UploadCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                              CommandParameter="{Binding Path}"/>
+                                                    <MenuItem Header="Upload folder here"
+                                                              Command="{Binding DataContext.UploadFolderCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                              CommandParameter="{Binding Path}"/>
+                                                    <MenuItem Header="Create folder"
+                                                              Command="{Binding DataContext.CreateFolderCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                              CommandParameter="{Binding Path}"/>
+                                                    <Separator/>
+                                                    <MenuItem Header="Commit selected"
+                                                              Command="{Binding DataContext.CommitCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                                    <MenuItem Header="Revert"
+                                                              Command="{Binding DataContext.RevertCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                              CommandParameter="{Binding Path}"/>
+                                                    <MenuItem Header="View history"
+                                                              Command="{Binding DataContext.ViewHistoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                              CommandParameter="{Binding Path}"/>
+                                                    <Separator/>
+                                                    <MenuItem Header="Lock"
+                                                              Command="{Binding DataContext.LockCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                              CommandParameter="{Binding Path}"/>
+                                                    <MenuItem Header="Unlock"
+                                                              Command="{Binding DataContext.UnlockCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                              CommandParameter="{Binding Path}"/>
+                                                    <Separator/>
+                                                    <MenuItem Header="Rename"
+                                                              Command="{Binding DataContext.RenameCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                              CommandParameter="{Binding Path}"/>
+                                                    <MenuItem Header="Delete"
+                                                              Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                              CommandParameter="{Binding Path}"/>
+                                                </ContextMenu>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </HierarchicalDataTemplate.ItemContainerStyle>
+                            </HierarchicalDataTemplate>
+                        </TreeView.ItemTemplate>
+                    </TreeView>
+                </DockPanel>
+            </Border>
+
+            <!-- CENTER: file viewer / editor -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Border Grid.Row="0" BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="0,0,0,1" Padding="14,8"
+                        Visibility="{Binding IsFileSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding SelectedItem.Path}" FontFamily="Consolas" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Content="Toggle Diff" Style="{DynamicResource SecondaryButton}" Command="{Binding ToggleDiffCommand}" Margin="0,0,8,0"/>
+                            <Button Content="Save" Style="{DynamicResource PrimaryButton}" Command="{Binding SaveFileCommand}" IsEnabled="{Binding IsEditable}"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+                <Grid Grid.Row="1" Visibility="{Binding IsFileSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <avalonEdit:TextEditor x:Name="Editor"
+                                            FontFamily="Consolas"
+                                            FontSize="13"
+                                            ShowLineNumbers="True"
+                                            Background="{DynamicResource BackgroundBrush}"
+                                            Foreground="{DynamicResource TextBrush}"
+                                            IsReadOnly="{Binding IsEditable, Converter={StaticResource InverseBooleanConverter}}"
+                                            behaviors:AvalonEditBehavior.BindableText="{Binding EditorText, Mode=TwoWay}"
+                                            Visibility="{Binding ShowDiff, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
+                    <TextBox Text="{Binding DiffText, Mode=OneWay}"
+                             FontFamily="Consolas" FontSize="13"
+                             IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
+                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                             BorderThickness="0"
+                             Visibility="{Binding ShowDiff, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                </Grid>
+                <TextBlock Grid.Row="1" Text="Select a file from the tree to view it here."
+                           Foreground="{DynamicResource MutedTextBrush}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Visibility="{Binding IsFileSelected, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
+            </Grid>
+
+            <!-- RIGHT: SVN operations -->
+            <Border Grid.Column="2" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="1,0,0,0">
+                <Grid>
+                    <StackPanel Visibility="{Binding IsHistoryVisible, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}">
+                        <Grid Margin="14,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="COMMIT" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" Content="⤓ Update" Style="{DynamicResource SecondaryButton}" Command="{Binding UpdateCommand}"/>
+                        </Grid>
+                        <TextBox Margin="14,0,14,8" Height="80" AcceptsReturn="True" TextWrapping="Wrap"
+                                 Text="{Binding CommitMessage, UpdateSourceTrigger=PropertyChanged}"/>
+                        <StackPanel Orientation="Horizontal" Margin="14,0,14,10">
+                            <Button Content="Commit" Style="{DynamicResource PrimaryButton}" Command="{Binding CommitCommand}" Margin="0,0,8,0"/>
+                            <Button Content="Revert Selected" Style="{DynamicResource SecondaryButton}" Command="{Binding RevertCommand}"/>
+                        </StackPanel>
+                        <TextBlock Text="CHANGED FILES" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource MutedTextBrush}" Margin="14,6"/>
+                        <ItemsControl ItemsSource="{Binding ChangedFiles}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Margin="14,4">
+                                        <CheckBox IsChecked="{Binding IsChecked}" Margin="0,0,8,0"/>
+                                        <TextBlock Text="{Binding Status}" Foreground="{Binding Status, Converter={StaticResource StatusToBrushConverter}}" FontWeight="Bold" FontSize="11" Margin="0,0,8,0"/>
+                                        <TextBlock Text="{Binding Path}" Foreground="{DynamicResource TextBrush}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <DockPanel Visibility="{Binding IsHistoryVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Grid DockPanel.Dock="Top" Margin="14,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding HistoryScopePath, StringFormat='HISTORY — {0}'}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" Content="✕" Style="{DynamicResource SecondaryButton}" Command="{Binding CloseHistoryCommand}"/>
+                        </Grid>
+                        <ScrollViewer>
+                            <ItemsControl ItemsSource="{Binding HistoryEntries}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="0,0,0,1" Padding="14,8">
+                                            <StackPanel>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="{Binding Revision, StringFormat='r{0}'}" Foreground="{DynamicResource MutedTextBrush}" FontSize="11"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding Date}" Foreground="{DynamicResource MutedTextBrush}" FontSize="11"/>
+                                                </Grid>
+                                                <TextBlock Text="{Binding Author}" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" Margin="0,4,0,2"/>
+                                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

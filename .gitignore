@@ -1,0 +1,19 @@
+# Node
+node_modules/
+dist/
+.env
+
+# Backend runtime data (contains encrypted SVN credentials)
+web/server/data/
+
+# .NET
+bin/
+obj/
+*.user
+
+# Editor/OS
+.vs/
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

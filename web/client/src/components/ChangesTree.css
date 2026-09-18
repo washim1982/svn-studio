@@ -1,0 +1,7 @@
+.changes-tree {
+  padding: 6px 4px;
+}
+
+.changes-tree .tree-node__row {
+  gap: 8px;
+}
