@@ -12,7 +12,7 @@ body,
 }
 
 body {
-  background: var(--color-bg);
+  background: var(--color-canvas);
   color: var(--color-text);
   font-family: var(--font-sans);
   font-size: 14px;
@@ -28,6 +28,7 @@ button {
   display: grid;
   grid-template-rows: 52px 1fr 26px;
   height: 100vh;
+  background: var(--color-canvas);
 }
 
 .icon-btn {
@@ -70,6 +71,9 @@ button {
   display: flex;
   height: 100%;
   overflow: hidden;
+  gap: var(--panel-gap);
+  padding: var(--panel-gap);
+  background: var(--color-canvas);
 }
 
 .panel {
@@ -77,7 +81,8 @@ button {
   flex-shrink: 0;
   overflow-y: auto;
   background: var(--color-bg-panel);
-  border-right: 1px solid var(--color-border);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   animation: fadeIn var(--transition-med);
   display: flex;
   flex-direction: column;
@@ -85,8 +90,6 @@ button {
 
 .panel--right {
   width: 340px;
-  border-right: none;
-  border-left: 1px solid var(--color-border);
 }
 
 .panel__header {
@@ -109,6 +112,8 @@ button {
   display: flex;
   flex-direction: column;
   background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
@@ -209,6 +214,25 @@ button {
 .composer__pill:hover:not(:disabled) {
   border-color: var(--color-accent);
   background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
+.composer__pill--ai {
+  border-color: color-mix(in srgb, #a371f7 55%, var(--color-border));
+  color: #c9a7ff;
+}
+
+.composer__pill--ai:hover:not(:disabled) {
+  border-color: #a371f7;
+  background: color-mix(in srgb, #a371f7 14%, transparent);
+}
+
+.composer__pill--active {
+  background: color-mix(in srgb, #a371f7 18%, transparent);
+  border-color: #a371f7;
+}
+
+:root[data-theme="light"] .composer__pill--ai {
+  color: #7c3aed;
 }
 
 .composer__pill:disabled {
@@ -327,6 +351,153 @@ button {
 .editor-breadcrumb__sep {
   margin: 0 5px;
   color: var(--color-border);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 16px;
+}
+
+.modal {
+  width: 520px;
+  max-width: 100%;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-panel);
+  padding: 24px;
+  animation: fadeIn var(--transition-fast);
+}
+
+.settings-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin: 18px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.settings-input select {
+  width: 100%;
+  background: var(--color-bg-panel);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+/* AI review result */
+.ai-review-modal {
+  width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ai-review-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ai-review-modal__meta {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.ai-review-modal__body {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.ai-review-modal__body pre {
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: pre;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+
+.ai-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Draggable splitter between panels. It sits exactly over the flex gap (negative
+   margins cancel the gap on both sides), so the visual spacing is unchanged. */
+.resize-handle {
+  flex-shrink: 0;
+  width: var(--panel-gap);
+  margin: 0 calc(-1 * var(--panel-gap));
+  cursor: col-resize;
+  position: relative;
+  z-index: 5;
+  outline: none;
+}
+
+.resize-handle::after {
+  content: "";
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: transparent;
+  transition: background var(--transition-fast);
+}
+
+.resize-handle:hover::after,
+.resize-handle:focus-visible::after,
+.resize-handle--active::after {
+  background: var(--color-accent);
+}
+
+body.is-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+body.is-resizing iframe,
+body.is-resizing .monaco-editor {
+  pointer-events: none;
 }
 
 .settings-input input {

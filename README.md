@@ -62,6 +62,42 @@ Or open `SvnClient.sln` in Visual Studio 2022+ and run. Settings are stored in `
 
 The Windows app is editable by default (per spec); the web app defaults to **read-only** viewing and only writes to the working copy when you flip the **Enable editing** toggle in the top bar.
 
+## AI Review (local LLM)
+
+The **AI Review** button (next to Commit / Update / Revert) opens a review box under the buttons. The commit message box below it stays as it was.
+
+- **Scope**: the file open in the viewer is included by default (the chip tagged *open*). Use **+** to add the open file's folder, any working folder (or the whole working copy), or the checked changes. Remove a chip with ×.
+- **Ask anything**: type a question about the scope, or leave it blank for a general code review. Press Enter to send and Shift+Enter for a new line.
+- **Model picker**: lists the server's chat models. *Auto model* uses the model saved in Settings.
+
+Both apps talk to any **OpenAI-compatible** endpoint, which covers:
+
+| Server | Endpoint in Settings |
+|---|---|
+| llama.cpp gateway (default) | `http://127.0.0.1:8181/v1` |
+| llama.cpp `llama-server` (direct) | `http://127.0.0.1:8080/v1` |
+| Ollama | `http://localhost:11434/v1` |
+| LM Studio | `http://localhost:1234/v1` |
+
+Start llama.cpp with, for example:
+
+```bash
+llama-server -m qwen2.5-coder-7b-instruct-q4_k_m.gguf --port 8080 --ctx-size 8192
+```
+
+Then in **Settings → Local AI**, pick the provider (or type a custom URL), click **Test connection** to list the server's models, and **Save**.
+
+- **Model**: leave blank to use the first chat model the server lists (embedding models are skipped). Set it explicitly for llama.cpp router mode or Ollama, since those route on the model name.
+- **API key**: only needed if the server was started with `--api-key`. It's stored encrypted (AES-GCM on web, DPAPI on Windows) and left unchanged when the field is blank.
+- The context sent to the model is capped at 12,000 characters so it fits an 8k context. Explicit files come first, then changes, then folder contents. Binary files, files over 200 KB, and `.svn`/`node_modules`/`bin`/`obj` are skipped. When the cap is hit, the review notes that the context was truncated.
+- `<think>…</think>` blocks from reasoning models are removed from the displayed review.
+
+The web client calls the model **from the backend** (`POST /ai/review`, `POST /ai/test`), so the API key never reaches the browser and there are no CORS issues.
+
+## Resizable panels
+
+Drag the gap between the Explorer, editor, and SVN panels to resize them. Double-click a gap to reset it. On the web, the arrow keys also work while a gap is focused. Widths are remembered: in `localStorage` on web, and in `settings.json` on Windows (saved on close). The editor always keeps at least 360px.
+
 ## REST API (web backend)
 
 | Method | Path | Purpose |
@@ -82,6 +118,8 @@ The Windows app is editable by default (per spec); the web app defaults to **rea
 | GET/PUT | `/settings` | Read/write repo URL, username, password, working copy path |
 | POST | `/settings/checkout` | `svn checkout` into the configured folder |
 | POST | `/settings/relink` | Point at an existing working copy without re-cloning |
+| POST | `/ai/test` | List chat models at an AI endpoint (Settings "Test connection") |
+| POST | `/ai/review` | AI review or question over a scope: `{ files, folders, changes, question, model }` |
 
 All path-taking endpoints reject any path that resolves outside the configured working copy root.
 

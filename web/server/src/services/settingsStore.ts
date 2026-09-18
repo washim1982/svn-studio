@@ -34,11 +34,16 @@ function decrypt(payload: string): string {
   return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
 }
 
+export const DEFAULT_AI_ENDPOINT = "http://127.0.0.1:8181/v1"; // local llama.cpp gateway
+
 interface StoredFile {
   repoUrl: string;
   username: string;
   workingCopyPath: string;
   passwordEnc?: string;
+  aiEndpoint?: string;
+  aiModel?: string;
+  aiApiKeyEnc?: string;
 }
 
 async function ensureDataDir(): Promise<void> {
@@ -54,6 +59,9 @@ export async function loadSettings(): Promise<SvnSettings | null> {
       username: stored.username,
       workingCopyPath: stored.workingCopyPath,
       password: stored.passwordEnc ? decrypt(stored.passwordEnc) : "",
+      aiEndpoint: stored.aiEndpoint ?? DEFAULT_AI_ENDPOINT,
+      aiModel: stored.aiModel ?? "",
+      aiApiKey: stored.aiApiKeyEnc ? decrypt(stored.aiApiKeyEnc) : "",
     };
   } catch (err: any) {
     if (err.code === "ENOENT") return null;
@@ -68,18 +76,32 @@ export async function saveSettings(settings: SvnSettings): Promise<void> {
     username: settings.username,
     workingCopyPath: settings.workingCopyPath,
     passwordEnc: settings.password ? encrypt(settings.password) : undefined,
+    aiEndpoint: settings.aiEndpoint,
+    aiModel: settings.aiModel,
+    aiApiKeyEnc: settings.aiApiKey ? encrypt(settings.aiApiKey) : undefined,
   };
   await fs.writeFile(SETTINGS_FILE, JSON.stringify(stored, null, 2), "utf8");
 }
 
 export function toPublic(settings: SvnSettings | null): SvnSettingsPublic {
   if (!settings) {
-    return { repoUrl: "", username: "", workingCopyPath: "", hasPassword: false };
+    return {
+      repoUrl: "",
+      username: "",
+      workingCopyPath: "",
+      hasPassword: false,
+      aiEndpoint: DEFAULT_AI_ENDPOINT,
+      aiModel: "",
+      hasAiApiKey: false,
+    };
   }
   return {
     repoUrl: settings.repoUrl,
     username: settings.username,
     workingCopyPath: settings.workingCopyPath,
     hasPassword: Boolean(settings.password),
+    aiEndpoint: settings.aiEndpoint,
+    aiModel: settings.aiModel,
+    hasAiApiKey: Boolean(settings.aiApiKey),
   };
 }

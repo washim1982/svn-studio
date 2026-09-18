@@ -13,9 +13,10 @@ public partial class App : System.Windows.Application
 
         var settingsService = new SettingsService();
         var svnService = new SvnCliService(settingsService);
-        var mainViewModel = new MainViewModel(svnService, settingsService);
+        var aiService = new AiReviewService();
+        var mainViewModel = new MainViewModel(svnService, settingsService, aiService);
 
-        var mainWindow = new MainWindow(mainViewModel, settingsService, svnService);
+        var mainWindow = new MainWindow(mainViewModel, settingsService, svnService, aiService);
         MainWindow = mainWindow;
         mainWindow.Show();
 

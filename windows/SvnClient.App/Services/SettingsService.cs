@@ -32,29 +32,35 @@ public class SettingsService
         File.WriteAllText(SettingsPath, json);
     }
 
-    public void SetPlainPassword(AppSettings settings, string plainPassword)
+    public void SetPlainPassword(AppSettings settings, string plainPassword) =>
+        settings.ProtectedPassword = Protect(plainPassword);
+
+    public string GetPlainPassword(AppSettings settings) => Unprotect(settings.ProtectedPassword);
+
+    public void SetPlainAiApiKey(AppSettings settings, string plainKey) =>
+        settings.ProtectedAiApiKey = Protect(plainKey);
+
+    public string GetPlainAiApiKey(AppSettings settings) => Unprotect(settings.ProtectedAiApiKey);
+
+    private static string? Protect(string plain)
     {
-        if (string.IsNullOrEmpty(plainPassword))
-        {
-            settings.ProtectedPassword = null;
-            return;
-        }
-        var protectedBytes = ProtectedData.Protect(Encoding.UTF8.GetBytes(plainPassword), Entropy, DataProtectionScope.CurrentUser);
-        settings.ProtectedPassword = Convert.ToBase64String(protectedBytes);
+        if (string.IsNullOrEmpty(plain)) return null;
+        var protectedBytes = ProtectedData.Protect(Encoding.UTF8.GetBytes(plain), Entropy, DataProtectionScope.CurrentUser);
+        return Convert.ToBase64String(protectedBytes);
     }
 
-    public string GetPlainPassword(AppSettings settings)
+    private static string Unprotect(string? protectedValue)
     {
-        if (string.IsNullOrEmpty(settings.ProtectedPassword)) return "";
+        if (string.IsNullOrEmpty(protectedValue)) return "";
         try
         {
-            var bytes = Convert.FromBase64String(settings.ProtectedPassword);
+            var bytes = Convert.FromBase64String(protectedValue);
             var plainBytes = ProtectedData.Unprotect(bytes, Entropy, DataProtectionScope.CurrentUser);
             return Encoding.UTF8.GetString(plainBytes);
         }
         catch (CryptographicException)
         {
-            // Protected blob from a different user/machine — treat as no password rather than crash.
+            // Protected blob from a different user/machine — treat as unset rather than crash.
             return "";
         }
     }

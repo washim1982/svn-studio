@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import type { SvnTreeNode } from "../types/svn";
-import { IconCheck, IconDownload, IconSend } from "./icons";
+import type { AiScope, SvnTreeNode } from "../types/svn";
+import { AiAssistBox } from "./AiAssistBox";
+import { IconCheck, IconDownload, IconSend, IconSparkle } from "./icons";
 import { ChangesTree } from "./ChangesTree";
 import { collectChangedPaths, pruneToChanges } from "../utils/changesTree";
 
@@ -9,10 +10,15 @@ interface CommitPanelProps {
   onCommit: (paths: string[], message: string) => void;
   onUpdate: () => void;
   onRevert: (paths: string[]) => void;
+  onAiReview: (scope: AiScope, question: string, model: string, scopeLabel: string) => void;
   busy: boolean;
+  aiReviewing: boolean;
+  openFilePath: string | null;
+  folders: string[];
 }
 
-export function CommitPanel({ tree, onCommit, onUpdate, onRevert, busy }: CommitPanelProps) {
+export function CommitPanel({ tree, onCommit, onUpdate, onRevert, onAiReview, busy, aiReviewing, openFilePath, folders }: CommitPanelProps) {
+  const [aiOpen, setAiOpen] = useState(false);
   const changesTree = useMemo(() => (tree ? pruneToChanges(tree) : null), [tree]);
   const changedPaths = useMemo(() => (changesTree ? collectChangedPaths(changesTree) : []), [changesTree]);
   const [message, setMessage] = useState("");
@@ -89,7 +95,25 @@ export function CommitPanel({ tree, onCommit, onUpdate, onRevert, busy }: Commit
           <button className="composer__pill" disabled={busy || selectedPaths.length === 0} onClick={() => onRevert(selectedPaths)}>
             Revert
           </button>
+          <span className="composer__dot">·</span>
+          <button
+            className={`composer__pill composer__pill--ai ${aiOpen ? "composer__pill--active" : ""}`}
+            onClick={() => setAiOpen((o) => !o)}
+            aria-expanded={aiOpen}
+            title="Ask your local LLM about the open file, a folder, or your changes"
+          >
+            <IconSparkle size={13} /> {aiReviewing ? "Reviewing…" : "AI Review"}
+          </button>
         </div>
+        {aiOpen && (
+          <AiAssistBox
+            openFilePath={openFilePath}
+            checkedChanges={selectedPaths}
+            folders={folders}
+            busy={aiReviewing}
+            onSubmit={onAiReview}
+          />
+        )}
         <div className="composer__input-row">
           <textarea
             className="composer__textarea"

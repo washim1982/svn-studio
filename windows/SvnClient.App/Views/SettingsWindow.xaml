@@ -1,53 +1,88 @@
 <Window x:Class="SvnClient.App.Views.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="SVN Settings" Height="440" Width="480"
+        Title="Settings" Height="720" Width="560"
         WindowStartupLocation="CenterOwner"
-        Background="{DynamicResource BackgroundBrush}">
+        Background="{DynamicResource ElevatedBrush}">
+    <Window.Resources>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+        <Style x:Key="SectionTitle" TargetType="Border">
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush2}"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="Padding" Value="0,0,0,6"/>
+            <Setter Property="Margin" Value="0,14,0,10"/>
+        </Style>
+    </Window.Resources>
+
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="SVN Settings" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,16"/>
+        <TextBlock Grid.Row="0" Text="Settings" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
 
-        <StackPanel Grid.Row="1" Margin="0,0,0,10">
-            <TextBlock Text="Repository URL" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" Margin="0,0,0,4"/>
-            <TextBox Text="{Binding RepoUrl, UpdateSourceTrigger=PropertyChanged}"/>
-        </StackPanel>
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="0,0,8,0">
+                <Border Style="{StaticResource SectionTitle}">
+                    <TextBlock Text="SVN REPOSITORY" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource MutedTextBrush}"/>
+                </Border>
 
-        <StackPanel Grid.Row="2" Margin="0,0,0,10">
-            <TextBlock Text="Username" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" Margin="0,0,0,4"/>
-            <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"/>
-        </StackPanel>
+                <TextBlock Text="Repository URL" Style="{StaticResource FieldLabel}"/>
+                <TextBox Text="{Binding RepoUrl, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
 
-        <StackPanel Grid.Row="3" Margin="0,0,0,10">
-            <TextBlock Text="Password" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" Margin="0,0,0,4"/>
-            <PasswordBox x:Name="PasswordInput" PasswordChanged="PasswordInput_PasswordChanged"/>
-        </StackPanel>
+                <TextBlock Text="Username" Style="{StaticResource FieldLabel}"/>
+                <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
 
-        <StackPanel Grid.Row="4" Margin="0,0,0,10">
-            <TextBlock Text="Local working-copy folder" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" Margin="0,0,0,4"/>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBox Grid.Column="0" Text="{Binding WorkingCopyPath, UpdateSourceTrigger=PropertyChanged}"/>
-                <Button Grid.Column="1" Content="Browse…" Margin="8,0,0,0" Style="{DynamicResource SecondaryButton}" Command="{Binding BrowseFolderCommand}"/>
-            </Grid>
-        </StackPanel>
+                <TextBlock Text="Password (leave blank to keep the stored one)" Style="{StaticResource FieldLabel}"/>
+                <PasswordBox x:Name="PasswordInput" PasswordChanged="PasswordInput_PasswordChanged" Margin="0,0,0,10"/>
 
-        <TextBlock Grid.Row="5" Text="{Binding StatusMessage}" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" Margin="0,4,0,10"/>
+                <TextBlock Text="Local working-copy folder" Style="{StaticResource FieldLabel}"/>
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0" Text="{Binding WorkingCopyPath, UpdateSourceTrigger=PropertyChanged}"/>
+                    <Button Grid.Column="1" Content="Browse…" Margin="8,0,0,0" Style="{DynamicResource SecondaryButton}" Command="{Binding BrowseFolderCommand}"/>
+                </Grid>
 
-        <StackPanel Grid.Row="7" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Border Style="{StaticResource SectionTitle}">
+                    <TextBlock Text="LOCAL AI (CODE REVIEW)" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource MutedTextBrush}"/>
+                </Border>
+
+                <TextBlock Text="Provider" Style="{StaticResource FieldLabel}"/>
+                <ComboBox ItemsSource="{Binding AiPresets}" SelectedItem="{Binding SelectedAiPreset}" DisplayMemberPath="Label" Margin="0,0,0,10"/>
+
+                <TextBlock Text="Endpoint URL (any OpenAI-compatible server; choose a provider above or type a custom URL)" Style="{StaticResource FieldLabel}" TextWrapping="Wrap"/>
+                <TextBox Text="{Binding AiEndpoint, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
+
+                <TextBlock Text="Model — click Test connection to list the server's models (blank = first available)" Style="{StaticResource FieldLabel}" TextWrapping="Wrap"/>
+                <ComboBox IsEditable="True" ItemsSource="{Binding AiModels}" Text="{Binding AiModel, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
+
+                <TextBlock Style="{StaticResource FieldLabel}">
+                    <TextBlock.Text>
+                        <Binding Path="HasStoredAiApiKey" StringFormat="API key (optional — needed for llama-server --api-key). Stored: {0}"/>
+                    </TextBlock.Text>
+                </TextBlock>
+                <PasswordBox x:Name="AiApiKeyInput" PasswordChanged="AiApiKeyInput_PasswordChanged" Margin="0,0,0,10"/>
+
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <Button Content="Test connection" Style="{DynamicResource SecondaryButton}" Command="{Binding TestAiConnectionCommand}"/>
+                    <TextBlock Text="{Binding AiStatus}" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" Margin="10,0,0,0" TextWrapping="Wrap" MaxWidth="340"/>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <TextBlock Grid.Row="2" Text="{Binding StatusMessage}" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" Margin="0,10,0,10"/>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="Relink Working Copy" Style="{DynamicResource SecondaryButton}" Margin="0,0,8,0" Command="{Binding RelinkCommand}"/>
             <Button Content="Checkout Repository" Style="{DynamicResource SecondaryButton}" Margin="0,0,8,0" Command="{Binding CheckoutCommand}"/>
             <Button Content="Save" Style="{DynamicResource PrimaryButton}" Command="{Binding SaveCommand}"/>

@@ -11,8 +11,6 @@
             <conv:StatusToBrushConverter x:Key="StatusToBrushConverter"/>
             <conv:StatusToLabelConverter x:Key="StatusToLabelConverter"/>
             <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-            <conv:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
-            <conv:BoolToGridLengthConverter x:Key="BoolToGridLengthConverter"/>
-        </ResourceDictionary>
+            <conv:InverseBooleanConverter x:Key="InverseBooleanConverter"/>        </ResourceDictionary>
     </Application.Resources>
 </Application>

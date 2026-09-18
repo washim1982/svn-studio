@@ -208,6 +208,132 @@ public class SvnCliService
         await File.WriteAllTextAsync(absPath, content);
     }
 
+    /// <summary>
+    /// One combined diff for AI review. Directories are skipped — a checked folder's changed
+    /// contents are already in the list individually, so diffing the folder would duplicate
+    /// them. Files with no `svn diff` output (e.g. unversioned) are included as full content.
+    /// </summary>
+    public async Task<string> GetReviewDiffAsync(AppSettings settings, IEnumerable<string> relativePaths)
+    {
+        var parts = new List<string>();
+        foreach (var relativePath in relativePaths)
+        {
+            var absPath = Path.Combine(settings.WorkingCopyPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
+            if (Directory.Exists(absPath)) continue;
+            var diff = await GetDiffAsync(settings, relativePath);
+            if (!string.IsNullOrWhiteSpace(diff))
+            {
+                parts.Add(diff);
+            }
+            else if (File.Exists(absPath))
+            {
+                var content = await File.ReadAllTextAsync(absPath);
+                if (content.Length > 0 && !content.Contains('\0')) parts.Add($"New file: {relativePath}\n+++ {relativePath}\n{content}");
+            }
+        }
+        return string.Join("\n", parts);
+    }
+
+    private static readonly HashSet<string> AiSkipDirs = new(StringComparer.OrdinalIgnoreCase)
+        { ".svn", ".git", "node_modules", "bin", "obj", "dist", "build", ".vs", ".idea", "__pycache__" };
+
+    private static readonly HashSet<string> AiBinaryExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".webp", ".pdf", ".zip", ".gz", ".7z", ".rar", ".tar",
+        ".exe", ".dll", ".so", ".dylib", ".bin", ".gguf", ".woff", ".woff2", ".ttf", ".eot", ".otf", ".mp3",
+        ".mp4", ".mov", ".avi", ".wav", ".class", ".jar", ".pyc", ".db", ".sqlite", ".docx", ".xlsx", ".pptx",
+    };
+
+    private const long AiMaxFileBytes = 200_000;
+
+    /// <summary>
+    /// Builds the text the model sees for a review/question, in priority order — explicit
+    /// files first, then uncommitted changes, then folder contents — stopping once the
+    /// character budget is spent so the prompt always fits the model's context window.
+    /// Mirrors the web backend's aiContext.ts.
+    /// </summary>
+    public async Task<(string Context, bool Truncated, int FileCount)> BuildAiContextAsync(
+        AppSettings settings, IReadOnlyList<string> files, IReadOnlyList<string> folders, IReadOnlyList<string> changes, int budget)
+    {
+        var sb = new StringBuilder();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var truncated = false;
+        var fileCount = 0;
+
+        bool Add(string block)
+        {
+            var remaining = budget - sb.Length;
+            if (block.Length <= remaining)
+            {
+                sb.Append(block);
+                return true;
+            }
+            truncated = true;
+            if (remaining > 300) sb.Append(block[..remaining]).Append("\n[... truncated to fit the model's context ...]\n");
+            return false;
+        }
+
+        async Task<bool> AddFileAsync(string relativePath, bool withDiff)
+        {
+            if (!seen.Add(relativePath)) return true;
+            var absPath = Path.Combine(settings.WorkingCopyPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
+            var info = new FileInfo(absPath);
+            if (!info.Exists || info.Length > AiMaxFileBytes || AiBinaryExtensions.Contains(info.Extension)) return true;
+            string content;
+            try { content = await File.ReadAllTextAsync(absPath); }
+            catch (IOException) { return true; }
+            if (content.Length == 0 || content.Contains('\0')) return true;
+            fileCount++;
+            if (!Add($"File: {relativePath}\n```\n{content}\n```\n\n")) return false;
+            if (withDiff)
+            {
+                string diff;
+                try { diff = await GetDiffAsync(settings, relativePath); }
+                catch { diff = ""; }
+                if (!string.IsNullOrWhiteSpace(diff) && !Add($"Uncommitted local changes to {relativePath}:\n```diff\n{diff}\n```\n\n")) return false;
+            }
+            return true;
+        }
+
+        async Task<bool> WalkFolderAsync(string relativeDir)
+        {
+            var absDir = Path.Combine(settings.WorkingCopyPath, relativeDir.Replace('/', Path.DirectorySeparatorChar));
+            if (!Directory.Exists(absDir)) return true;
+            foreach (var entry in new DirectoryInfo(absDir).EnumerateFileSystemInfos().OrderBy(e => e.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                var rel = string.IsNullOrEmpty(relativeDir) ? entry.Name : $"{relativeDir}/{entry.Name}";
+                if (entry is DirectoryInfo)
+                {
+                    if (AiSkipDirs.Contains(entry.Name)) continue;
+                    if (!await WalkFolderAsync(rel)) return false;
+                }
+                else if (!await AddFileAsync(rel, false))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        var keepGoing = true;
+        foreach (var file in files)
+        {
+            if (!keepGoing) break;
+            keepGoing = await AddFileAsync(file, true);
+        }
+        if (keepGoing && changes.Count > 0)
+        {
+            var diff = await GetReviewDiffAsync(settings, changes);
+            if (!string.IsNullOrWhiteSpace(diff)) keepGoing = Add($"Uncommitted changes (svn diff):\n```diff\n{diff}\n```\n\n");
+        }
+        foreach (var folder in folders)
+        {
+            if (!keepGoing) break;
+            keepGoing = await WalkFolderAsync(folder);
+        }
+        return (sb.ToString(), truncated, fileCount);
+    }
+
     public async Task CreateFileAsync(AppSettings settings, string relativePath)
     {
         var absPath = Path.Combine(settings.WorkingCopyPath, relativePath.Replace('/', Path.DirectorySeparatorChar));

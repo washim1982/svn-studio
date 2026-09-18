@@ -11,7 +11,7 @@ settingsRouter.get("/", async (_req, res) => {
 });
 
 settingsRouter.put("/", async (req, res) => {
-  const { repoUrl, username, password, workingCopyPath } = req.body ?? {};
+  const { repoUrl, username, password, workingCopyPath, aiEndpoint, aiModel, aiApiKey } = req.body ?? {};
   if (!repoUrl || !workingCopyPath) {
     res.status(400).json({ error: "repoUrl and workingCopyPath are required" });
     return;
@@ -22,6 +22,10 @@ settingsRouter.put("/", async (req, res) => {
     username: username ?? existing?.username ?? "",
     password: password || existing?.password || "",
     workingCopyPath,
+    aiEndpoint: aiEndpoint ?? existing?.aiEndpoint ?? settingsStore.DEFAULT_AI_ENDPOINT,
+    aiModel: aiModel ?? existing?.aiModel ?? "",
+    // Blank means "keep the stored key", matching how the SVN password field behaves.
+    aiApiKey: aiApiKey || existing?.aiApiKey || "",
   };
   await settingsStore.saveSettings(merged);
   res.json(settingsStore.toPublic(merged));
@@ -58,6 +62,9 @@ settingsRouter.post("/relink", async (req, res) => {
     username: existing?.username ?? "",
     password: existing?.password ?? "",
     workingCopyPath,
+    aiEndpoint: existing?.aiEndpoint ?? settingsStore.DEFAULT_AI_ENDPOINT,
+    aiModel: existing?.aiModel ?? "",
+    aiApiKey: existing?.aiApiKey ?? "",
   };
   await settingsStore.saveSettings(merged);
   res.json(settingsStore.toPublic(merged));

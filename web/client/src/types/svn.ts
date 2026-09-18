@@ -36,4 +36,21 @@ export interface SvnSettingsPublic {
   username: string;
   workingCopyPath: string;
   hasPassword: boolean;
+  aiEndpoint: string;
+  aiModel: string;
+  hasAiApiKey: boolean;
+}
+
+export interface AiReviewResult {
+  review: string;
+  model: string;
+  truncated: boolean;
+  fileCount: number;
+}
+
+/** What the AI reviewer looks at. "" in folders means the whole working copy. */
+export interface AiScope {
+  files: string[];
+  folders: string[];
+  changes: string[];
 }

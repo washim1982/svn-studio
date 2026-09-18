@@ -5,7 +5,7 @@
         xmlns:behaviors="clr-namespace:SvnClient.App.Behaviors"
         xmlns:vm="clr-namespace:SvnClient.App.ViewModels"
         Title="SVN Studio" Height="860" Width="1480"
-        Background="{DynamicResource BackgroundBrush}"
+        Background="{DynamicResource CanvasBrush}"
         WindowStartupLocation="CenterScreen">
 
     <Grid>
@@ -57,15 +57,28 @@
 
         <!-- ===================== WORKSPACE ===================== -->
         <Grid Grid.Row="1">
+            <!-- Panel columns are TwoWay-bound: dragging a GridSplitter writes the new width
+                 back to the view model, which persists it on close. The 8px splitter columns
+                 double as the gap between the rounded panels. -->
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="48"/>
-                <ColumnDefinition Width="{Binding LeftPanelVisible, Converter={StaticResource BoolToGridLengthConverter}, ConverterParameter=280}"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="{Binding RightPanelVisible, Converter={StaticResource BoolToGridLengthConverter}, ConverterParameter=380}"/>
+                <ColumnDefinition Width="56"/>
+                <ColumnDefinition Width="{Binding LeftColumnWidth, Mode=TwoWay}" MinWidth="{Binding LeftColumnMinWidth}" MaxWidth="{Binding PanelMaxColumnWidth}"/>
+                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="*" MinWidth="360"/>
+                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="{Binding RightColumnWidth, Mode=TwoWay}" MinWidth="{Binding RightColumnMinWidth}" MaxWidth="{Binding PanelMaxColumnWidth}"/>
             </Grid.ColumnDefinitions>
 
+            <GridSplitter Grid.Column="2" Style="{DynamicResource PanelSplitter}"
+                          IsEnabled="{Binding LeftPanelVisible}" ToolTip="Drag to resize Explorer · double-click to reset"
+                          MouseDoubleClick="LeftSplitter_DoubleClick"/>
+            <GridSplitter Grid.Column="4" Style="{DynamicResource PanelSplitter}"
+                          IsEnabled="{Binding RightPanelVisible}" ToolTip="Drag to resize SVN panel · double-click to reset"
+                          MouseDoubleClick="RightSplitter_DoubleClick"/>
+
             <!-- ACTIVITY BAR -->
-            <Border Grid.Column="0" Background="{DynamicResource ElevatedBrush}" BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="0,0,1,0">
+            <Border Grid.Column="0" Background="{DynamicResource ElevatedBrush}" BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="1"
+                    CornerRadius="14" Margin="8,8,0,8">
                 <Grid>
                     <StackPanel VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,10,0,0">
                         <Button Content="🗀" Width="36" Height="36" Style="{DynamicResource SecondaryButton}" BorderThickness="0" Margin="0,0,0,4"
@@ -89,7 +102,8 @@
             </Border>
 
             <!-- LEFT: EXPLORER -->
-            <Border Grid.Column="1" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="0,0,1,0"
+            <Border Grid.Column="1" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="1"
+                    CornerRadius="14" Margin="8,8,0,8"
                     Visibility="{Binding LeftPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}">
                 <DockPanel>
                     <Grid DockPanel.Dock="Top" Margin="12,10,8,4">
@@ -201,7 +215,9 @@
             </Border>
 
             <!-- CENTER: file viewer / editor -->
-            <Grid Grid.Column="2">
+            <Border Grid.Column="3" Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="1"
+                    CornerRadius="14" Margin="0,8,0,8">
+            <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -249,9 +265,11 @@
                     </StackPanel>
                 </Grid>
             </Grid>
+            </Border>
 
             <!-- RIGHT: SVN operations -->
-            <Border Grid.Column="3" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="1,0,0,0"
+            <Border Grid.Column="5" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="1"
+                    CornerRadius="14" Margin="0,8,8,8"
                     Visibility="{Binding RightPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -356,11 +374,140 @@
                     <Border Grid.Row="1" BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="0,1,0,0" Padding="12,10"
                             Visibility="{Binding IsHistoryVisible, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}">
                         <StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                <Button Content="✓ Commit" Style="{DynamicResource PrimaryButton}" Command="{Binding CommitCommand}" Margin="0,0,8,0" Padding="10,5" FontSize="11"/>
-                                <Button Content="⤓ Update" Style="{DynamicResource SecondaryButton}" Command="{Binding UpdateCommand}" Margin="0,0,8,0" Padding="10,5" FontSize="11"/>
-                                <Button Content="Revert" Style="{DynamicResource SecondaryButton}" Command="{Binding RevertCommand}" Padding="10,5" FontSize="11"/>
-                            </StackPanel>
+                            <WrapPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <Button Content="✓ Commit" Style="{DynamicResource PrimaryButton}" Command="{Binding CommitCommand}" Margin="0,0,8,4" Padding="10,5" FontSize="11"/>
+                                <Button Content="⤓ Update" Style="{DynamicResource SecondaryButton}" Command="{Binding UpdateCommand}" Margin="0,0,8,4" Padding="10,5" FontSize="11"/>
+                                <Button Content="Revert" Style="{DynamicResource SecondaryButton}" Command="{Binding RevertCommand}" Padding="10,5" FontSize="11" Margin="0,0,8,4"/>
+                                <Button Style="{DynamicResource AiButton}" Command="{Binding ToggleAiPanelCommand}" Padding="10,5" FontSize="11" Margin="0,0,0,4"
+                                        ToolTip="Ask your local LLM about the open file, a folder, or your changes">
+                                    <TextBlock>
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="✦ AI Review"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsAiReviewing}" Value="True">
+                                                        <Setter Property="Text" Value="Reviewing…"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Button>
+                            </WrapPanel>
+
+                            <!-- AI review box: scope chips, question, "+" scope menu, model picker, send.
+                                 Sits between the action buttons and the (unchanged) commit box. -->
+                            <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="1"
+                                    CornerRadius="14" Padding="10,8" Margin="0,2,0,10"
+                                    Visibility="{Binding IsAiPanelOpen, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <StackPanel>
+                                    <ItemsControl ItemsSource="{Binding AiScopeItems}" Margin="0,0,0,4">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type vm:AiScopeItem}">
+                                                <Border Background="{DynamicResource ElevatedBrush}" BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="1"
+                                                        CornerRadius="10" Padding="7,1,2,1" Margin="0,0,6,4" ToolTip="{Binding ToolTip}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding Icon}" FontSize="10" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                        <TextBlock Text="{Binding Label}" FontSize="11" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"
+                                                                   MaxWidth="170" TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Text="OPEN" FontSize="8" Foreground="#C9A7FF" VerticalAlignment="Center" Margin="4,0,0,0"
+                                                                   Visibility="{Binding IsAuto, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                        <Button Content="×" Width="16" Height="16" Padding="0" Margin="3,0,0,0" FontSize="11" BorderThickness="0"
+                                                                Style="{DynamicResource SecondaryButton}" ToolTip="Remove from scope"
+                                                                Command="{Binding DataContext.RemoveAiScopeItemCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding}"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <TextBlock Text="No scope — open a file or use + to add a folder" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" Margin="0,0,0,4">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding AiScopeItems.Count}" Value="0">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+
+                                    <Grid>
+                                        <TextBox x:Name="AiQuestionBox" Text="{Binding AiQuestion, UpdateSourceTrigger=PropertyChanged}"
+                                                 Background="Transparent" BorderThickness="0" Padding="2,4" MinHeight="40"
+                                                 AcceptsReturn="False" TextWrapping="Wrap" PreviewKeyDown="AiQuestionBox_PreviewKeyDown"/>
+                                        <TextBlock Text="Ask anything, or leave blank for a code review…" Foreground="{DynamicResource MutedTextBrush}"
+                                                   Margin="4,4,0,0" IsHitTestVisible="False">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding AiQuestion}" Value="">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+
+                                    <Grid Margin="0,4,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0" x:Name="AiAddScopeButton" Content="+" Width="26" Height="26" Padding="0" FontSize="15"
+                                                BorderThickness="0" Style="{DynamicResource SecondaryButton}" ToolTip="Add to review scope"
+                                                Click="AiAddScope_Click"/>
+                                        <ComboBox Grid.Column="1" ItemsSource="{Binding AiModels}" SelectedItem="{Binding AiSelectedModel}"
+                                                  Margin="6,0,8,0" MaxWidth="200" HorizontalAlignment="Left" FontWeight="Bold" FontSize="11"
+                                                  ToolTip="Model for this review">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock>
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Text" Value="{Binding}"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding}" Value="">
+                                                                        <Setter Property="Text" Value="Auto model"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                        <Button Grid.Column="2" Width="30" Height="30" Padding="0" Click="AiReview_Click" IsEnabled="{Binding CanAiReview}"
+                                                ToolTip="Run AI review (Enter)">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border x:Name="Circle" CornerRadius="15" Background="#A371F7">
+                                                        <TextBlock Text="➤" Foreground="White" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="Circle" Property="Background" Value="#8B5CF6"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsEnabled" Value="False">
+                                                            <Setter TargetName="Circle" Property="Background" Value="{DynamicResource ElevatedBrush}"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                        </Button>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
                             <Grid>
                                 <TextBox Height="70" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
                                          Text="{Binding CommitMessage, UpdateSourceTrigger=PropertyChanged}"/>

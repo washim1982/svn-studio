@@ -1,4 +1,4 @@
-import type { SvnLogEntry, SvnSettingsPublic, SvnTreeNode } from "../types/svn";
+import type { AiReviewResult, AiScope, SvnLogEntry, SvnSettingsPublic, SvnTreeNode } from "../types/svn";
 
 const BASE = "/api";
 
@@ -75,8 +75,21 @@ export const svnApi = {
   },
 
   getSettings: () => request<SvnSettingsPublic>("/settings"),
-  saveSettings: (settings: { repoUrl: string; username: string; password?: string; workingCopyPath: string }) =>
-    request<SvnSettingsPublic>("/settings", { method: "PUT", body: JSON.stringify(settings) }),
+  saveSettings: (settings: {
+    repoUrl: string;
+    username: string;
+    password?: string;
+    workingCopyPath: string;
+    aiEndpoint: string;
+    aiModel: string;
+    aiApiKey?: string;
+  }) => request<SvnSettingsPublic>("/settings", { method: "PUT", body: JSON.stringify(settings) }),
+  testAi: (endpoint: string, apiKey?: string) =>
+    request<{ ok: boolean; models: string[] }>("/ai/test", { method: "POST", body: JSON.stringify({ endpoint, apiKey }) }),
+  /** Lists chat models at the saved endpoint (blank endpoint = use the stored one). */
+  aiModels: () => request<{ ok: boolean; models: string[] }>("/ai/test", { method: "POST", body: JSON.stringify({}) }),
+  aiReview: (scope: AiScope, question: string, model: string) =>
+    request<AiReviewResult>("/ai/review", { method: "POST", body: JSON.stringify({ ...scope, question, model }) }),
   checkoutRepository: () => request<{ success: boolean; output: string }>("/settings/checkout", { method: "POST" }),
   relinkWorkingCopy: (workingCopyPath: string) =>
     request<SvnSettingsPublic>("/settings/relink", { method: "POST", body: JSON.stringify({ workingCopyPath }) }),

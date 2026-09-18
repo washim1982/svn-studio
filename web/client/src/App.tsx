@@ -10,9 +10,25 @@ import { FileViewer } from "./components/FileViewer";
 import { CommitPanel } from "./components/CommitPanel";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { Settings } from "./components/Settings";
-import type { SvnLogEntry, SvnTreeNode } from "./types/svn";
+import { ResizeHandle } from "./components/ResizeHandle";
+import { AiReviewModal, type AiReviewState } from "./components/AiReviewModal";
+import type { AiScope, SvnLogEntry, SvnTreeNode } from "./types/svn";
 import { flattenTree } from "./utils/treeUtils";
 import { displayLanguageFromPath } from "./utils/language";
+import { usePanelWidth } from "./hooks/usePanelWidth";
+
+const LEFT_DEFAULT = 280;
+const RIGHT_DEFAULT = 340;
+const LEFT_MIN = 180;
+const RIGHT_MIN = 260;
+const PANEL_MAX = 720;
+// Activity bar + a usable minimum editor width + the gaps between cards.
+const RESERVED_FOR_EDITOR = 56 + 360 + 48;
+
+function clampPanel(value: number, min: number, otherPanelWidth: number): number {
+  const max = Math.min(PANEL_MAX, window.innerWidth - otherPanelWidth - RESERVED_FOR_EDITOR);
+  return Math.round(Math.max(min, Math.min(value, Math.max(min, max))));
+}
 
 export default function App() {
   const { theme, toggleTheme } = useTheme();
@@ -34,6 +50,22 @@ export default function App() {
   const [leftPanelVisible, setLeftPanelVisible] = useState(true);
   const [rightPanelVisible, setRightPanelVisible] = useState(true);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [aiReview, setAiReview] = useState<AiReviewState | null>(null);
+  const [leftWidth, setLeftWidth, resetLeftWidth] = usePanelWidth("svn-studio-left-width", LEFT_DEFAULT);
+  const [rightWidth, setRightWidth, resetRightWidth] = usePanelWidth("svn-studio-right-width", RIGHT_DEFAULT);
+
+  const effectiveLeft = leftPanelVisible ? leftWidth : 0;
+  const effectiveRight = rightPanelVisible ? rightWidth : 0;
+
+  async function runAiReview(scope: AiScope, question: string, model: string, scopeLabel: string) {
+    setAiReview({ status: "loading", scopeLabel, question });
+    try {
+      const result = await svnApi.aiReview(scope, question, model);
+      setAiReview({ status: "done", result, scopeLabel, question });
+    } catch (err: any) {
+      setAiReview({ status: "error", error: err.message });
+    }
+  }
 
   // Simple back/forward navigation over visited files, like an editor's file history.
   const [navHistory, setNavHistory] = useState<string[]>([]);
@@ -225,6 +257,7 @@ export default function App() {
   }, [tree]);
 
   const flatFiles = useMemo(() => flattenTree(tree), [tree]);
+  const folderPaths = useMemo(() => flatFiles.filter((f) => f.isDirectory).map((f) => f.path), [flatFiles]);
 
   const paletteCommands: PaletteCommand[] = [
     { id: "update", label: "SVN: Update working copy", run: () => withBusy(async () => { await svnApi.update(); }) },
@@ -264,15 +297,24 @@ export default function App() {
         />
 
         {leftPanelVisible && (
-          <div className="panel">
-            {!configured ? (
-              <div style={{ padding: 16, color: "var(--color-text-muted)" }}>
-                SVN isn't configured yet. Open <button className="icon-btn" onClick={() => setSettingsOpen(true)}>Settings</button> to link a working copy.
-              </div>
-            ) : (
-              <FileTree root={tree} selectedPath={selectedPath} repoName={repoName} onRefresh={refreshTree} {...treeActions} />
-            )}
-          </div>
+          <>
+            <div className="panel" style={{ width: leftWidth }}>
+              {!configured ? (
+                <div style={{ padding: 16, color: "var(--color-text-muted)" }}>
+                  SVN isn't configured yet. Open <button className="icon-btn" onClick={() => setSettingsOpen(true)}>Settings</button> to link a working copy.
+                </div>
+              ) : (
+                <FileTree root={tree} selectedPath={selectedPath} repoName={repoName} onRefresh={refreshTree} {...treeActions} />
+              )}
+            </div>
+            <ResizeHandle
+              side="left"
+              label="Resize Explorer"
+              width={leftWidth}
+              onResize={(w) => setLeftWidth(clampPanel(w, LEFT_MIN, effectiveRight))}
+              onReset={resetLeftWidth}
+            />
+          </>
         )}
 
         <div className="center-panel">
@@ -288,7 +330,17 @@ export default function App() {
         </div>
 
         {rightPanelVisible && (
-          <div className="panel panel--right">
+          <ResizeHandle
+            side="right"
+            label="Resize SVN panel"
+            width={rightWidth}
+            onResize={(w) => setRightWidth(clampPanel(w, RIGHT_MIN, effectiveLeft))}
+            onReset={resetRightWidth}
+          />
+        )}
+
+        {rightPanelVisible && (
+          <div className="panel panel--right" style={{ width: rightWidth }}>
             {activeView === "history" ? (
               <HistoryPanel
                 entries={historyEntries}
@@ -313,6 +365,10 @@ export default function App() {
                 onRevert={(paths) => withBusy(async () => {
                   await svnApi.revert(paths);
                 })}
+                onAiReview={runAiReview}
+                aiReviewing={aiReview?.status === "loading"}
+                openFilePath={selectedPath}
+                folders={folderPaths}
               />
             )}
           </div>
@@ -336,6 +392,17 @@ export default function App() {
         commands={paletteCommands}
         onSelectFile={navigateToFile}
       />
+
+      {aiReview && (
+        <AiReviewModal
+          state={aiReview}
+          onClose={() => setAiReview(null)}
+          onOpenSettings={() => {
+            setAiReview(null);
+            setSettingsOpen(true);
+          }}
+        />
+      )}
 
       {settingsOpen && (
         <Settings

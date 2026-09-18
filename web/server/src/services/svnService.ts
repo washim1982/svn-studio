@@ -278,6 +278,29 @@ export async function getDiff(settings: SvnSettings, relativePath: string): Prom
   return result.stdout;
 }
 
+/**
+ * One combined diff for AI review. Directories are skipped — a checked folder's changed
+ * contents are already in `paths` individually, so diffing the folder too would duplicate
+ * them. Files with no `svn diff` output (e.g. unversioned) are included as full content.
+ */
+export async function getReviewDiff(settings: SvnSettings, relativePaths: string[]): Promise<string> {
+  const { promises: fs } = await import("node:fs");
+  const parts: string[] = [];
+  for (const relativePath of relativePaths) {
+    const absPath = path.join(settings.workingCopyPath, relativePath);
+    const stat = await fs.stat(absPath).catch(() => null); // null = deleted, still diffable
+    if (stat?.isDirectory()) continue;
+    const diff = await getDiff(settings, relativePath);
+    if (diff.trim()) {
+      parts.push(diff);
+    } else if (stat) {
+      const content = await fs.readFile(absPath, "utf8").catch(() => "");
+      if (content && !content.includes(" ")) parts.push(`New file: ${relativePath}\n+++ ${relativePath}\n${content}`);
+    }
+  }
+  return parts.join("\n");
+}
+
 export async function lockPath(settings: SvnSettings, relativePath: string, message?: string): Promise<void> {
   const absPath = path.join(settings.workingCopyPath, relativePath);
   const args = ["lock", absPath, ...authArgs(settings)];

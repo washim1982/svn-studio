@@ -44,6 +44,9 @@ export interface SvnSettings {
   username: string;
   password: string; // encrypted at rest, decrypted only in-process
   workingCopyPath: string;
+  aiEndpoint: string; // OpenAI-compatible base URL, e.g. llama.cpp's http://localhost:8080/v1
+  aiModel: string;
+  aiApiKey: string; // encrypted at rest; optional (llama.cpp needs none by default)
 }
 
 export interface SvnSettingsPublic {
@@ -51,6 +54,9 @@ export interface SvnSettingsPublic {
   username: string;
   workingCopyPath: string;
   hasPassword: boolean;
+  aiEndpoint: string;
+  aiModel: string;
+  hasAiApiKey: boolean;
 }
 
 export interface CommandResult {
